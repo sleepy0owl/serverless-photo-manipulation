@@ -5,17 +5,24 @@ module.exports.handler = async (event, context) => {
     try {
         const bucket_name = process.env.BUCKET;
         console.log('BUCKET :', bucket_name);
-        const body = event.body;
+        const body = JSON.parse(event.body);
+        let file = body.file;
+        // base64 decode
+        let base64_string = file.replace(/^data:image\/\w+;base64,/, '');
+        //create buffer 
+        let file_buffer = Buffer.from(base64_string, "base64");
+        
         const s3 = new aws.S3();
-        var presigned_url = s3.getSignedUrl('putObject', {
+        const upload_response = await s3.upload({
             Bucket: bucket_name,
-            Key: 'image.jpeg',
-            Expires: 100
-        });
-        presigned_url = decodeURIComponent(presigned_url)
+            Key: `${Date.now().toString()}.jpeg`,
+            Body: file_buffer,
+            ContentType: 'image/jpeg'
+        }).promise();
+        console.log(upload_response);
         return {
             statusCode:200,
-            body: JSON.stringify({"url": presigned_url})
+            body: JSON.stringify({"message": 'upload success'})
         } 
     } catch (error) {
         console.error(error);
